@@ -12,4 +12,8 @@ Finally, the checkpoint of the pretrained model in our data if availabel in:
 提取码：8upx 
 --来自百度网盘超级会员V4的分享
 
+
+**Finally, please do not forget that the pre-trained model on our data can only handle 10X at**
+
+
 ![image](https://raw.githubusercontent.com/Bingchao-Zhao/QC/master/seg.jpg)
