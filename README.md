@@ -2,7 +2,6 @@
 Using Deep Learning for Pathology Image Quality Control
 
 If you want to train a new network for quality control, you can use the train_resnet.py.
-
 In the orignal code, our model classfy two class, tissue and blank (including blank and pollution).
 
 If you only want to use our model to segmentate the tissue from WSI, you can use the test_wsi.py. But our code donot process the 
