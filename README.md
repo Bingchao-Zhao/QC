@@ -11,4 +11,4 @@ Finally, the checkpoint of the pretrained model in our data if availabel in:
 提取码：8upx 
 --来自百度网盘超级会员V4的分享
 
-![image] https://github.com/Bingchao-Zhao/QC/tree/master/1652775945(1).jpg
+![image](https://github.com/Bingchao-Zhao/QC/tree/master/1652775945(1).jpg)
