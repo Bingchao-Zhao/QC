@@ -8,6 +8,7 @@ If you only want to use our model to segmentate the tissue from WSI, you can use
 WSI file (.svs or .tiff, etc.) directly. You have to save the WSI file to .png or .jpg, then use test_wsi.py to segmentate the tissue.
 
 Finally, the checkpoint of the pretrained model in our data if availabel in:
+
 链接：https://pan.baidu.com/s/1ohAg2nMxch6gWiZGjycrmA 
 提取码：4ycc
 
