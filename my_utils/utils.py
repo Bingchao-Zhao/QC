@@ -5,6 +5,7 @@ import os
 import gc
 import torch
 import glob
+import traceback
 import numpy as np
 last_color  =31
 WARNING     = 2
@@ -70,7 +71,7 @@ def is_number(s):
     return False
 
 def rtime_print(str,end='\r'):
-    print('\033[5;{}m{}\033[0m'.format(random.randint(31, 37),str), end=end,flush=True)
+    print(f'\033[5;{random.randint(31, 37)}m{str}\033[0m', end=end,flush=True)
 
 
 def com_str(str,rc=True,sep=' ',last=False):
@@ -80,9 +81,9 @@ def com_str(str,rc=True,sep=' ',last=False):
 			last_color = last_color
 		else:
 			last_color = random.randint(31, 37)
-		return '\033[1;{}m{}{}\033[0m'.format(last_color,str,sep)
+		return f'\033[1;{last_color}m{str}{sep}\033[0m'
 	else:
-		return '\033[1;36m{}{}\033[0m'.format(str,sep)
+		return f'\033[1;36m{str}{sep}\033[0m'
 
 
 def my_print(*args,rc=True,sep=' ',if_last=False,color = ''):
@@ -100,6 +101,8 @@ def my_print(*args,rc=True,sep=' ',if_last=False,color = ''):
         print(com_str(args[len(args)-1],rc,sep,last=if_last))
 
 def color_str(*args,color = COLORS['BLACK']):
+    if len(args) == 1:
+        return COLOR_CONSTRUCT.format(color, args[0])
     return [COLOR_CONSTRUCT.format(color,a) for a in args]
 
 
@@ -119,11 +122,11 @@ def tips(*args, sep=' '):
     funcName    = sys._getframe().f_back.f_code.co_name  # 获取调用函数名
     lineNumber  = sys._getframe().f_back.f_lineno
     
-    info_str, file, funcName, lineNumber, p = \
-        color_str(LEVEL_INFO[TIPS],file, funcName, lineNumber, p, color = COLORS[LEVEL_COLOR[TIPS]])
+    info_str, funcName, lineNumber, p = \
+        color_str(LEVEL_INFO[TIPS],funcName, lineNumber, p, color = COLORS[LEVEL_COLOR[TIPS]])
     
-    p   = "[{}][{}][{}:{}] {}".\
-                format(info_str, file, funcName, lineNumber,  p)
+    p   = "[{}][{}:{}] {}".\
+                format(info_str, funcName, lineNumber,  p)
     print(p)
 
 def flow(*args, sep=' '):
@@ -132,11 +135,11 @@ def flow(*args, sep=' '):
     funcName    = sys._getframe().f_back.f_code.co_name  # 获取调用函数名
     lineNumber  = sys._getframe().f_back.f_lineno
 
-    info_str, file, funcName, lineNumber, p = \
-        color_str(LEVEL_INFO[FLOW],file, funcName, lineNumber, p, color = COLORS[LEVEL_COLOR[FLOW]])
+    info_str, funcName, lineNumber, p = \
+        color_str(LEVEL_INFO[FLOW],funcName, lineNumber, p, color = COLORS[LEVEL_COLOR[FLOW]])
     
-    p   = "[{}][{}][{}:{}] {}".\
-                format(info_str, file, funcName, lineNumber,  p)
+    p   = "[{}][{}:{}] {}".\
+                format(info_str, funcName, lineNumber,  p)
     print(p)
 
 def high(*args, sep=' '):
@@ -152,18 +155,23 @@ def high(*args, sep=' '):
                 format(info_str, file, funcName, lineNumber,  p)
     print(p)
 
-def err(*args, sep=' ', exit = True):
+def err(*args, sep=' ', exit = True, show_traceback_line=5):
     p = sep.join([str(a) for a in args])
     file        = __file__.split("/")[-1]
     funcName    = sys._getframe().f_back.f_code.co_name  # 获取调用函数名
     lineNumber  = sys._getframe().f_back.f_lineno
 
-    info_str, file, funcName, lineNumber, p = \
-        color_str(LEVEL_INFO[ERROR],file, funcName, lineNumber, p, color = COLORS[LEVEL_COLOR[ERROR]])
+    info_str, funcName, lineNumber, p = \
+        color_str(LEVEL_INFO[ERROR], funcName, lineNumber, p, color = COLORS[LEVEL_COLOR[ERROR]])
     
-    p   = "[{}][{}][{}:{}] {}".\
-                format(info_str, file, funcName, lineNumber,  p)
+    p   = "[{}][{}:{}] {}".\
+                format(info_str, funcName, lineNumber,  p)
     print(p)
+    fs = traceback.format_stack()
+    for line in fs[0-show_traceback_line:len(fs)]:
+        p   = color_str(line.strip(), color = COLORS[LEVEL_COLOR[ERROR]])
+        print(p)
+
     if exit:
         sys.exit()
 
@@ -213,9 +221,22 @@ class MyZip(object):
 
 
 #判断file 或者floder是否存在
-def just_ff(path,*,file=False,floder=True,create_floder = False, info = True):
+def just_ff(path:str,*,file=False,floder=True,create_floder=False, info=True):
+    """
+    Check the input path status. Exist or not.
+
+    Args:
+        path (str): _description_
+        file (bool, optional): _description_. Defaults to False.
+        floder (bool, optional): _description_. Defaults to True.
+        create_floder (bool, optional): _description_. Defaults to False.
+        info (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        _type_: _description_
+    """
     if file:
-        return os.path.exists(path)
+        return os.path.isfile(path)
     elif floder:
         if os.path.exists(path):
             return True
@@ -235,6 +256,19 @@ def just_ff(path,*,file=False,floder=True,create_floder = False, info = True):
                     tips(r"Path '{}' does not exists！！".format(path))
                 return False
                 
+
+def just_dir_of_file(file_path:str, create_floder:bool=True):
+    """_summary_
+    Check the dir of the input file. If donot exist, creat it!
+    Args:
+        file_path (_type_): _description_
+        create_floder (bool, optional): _description_. Defaults to True.
+
+    Returns:
+        _type_: _description_
+    """
+    _dir = os.path.split(file_path)[0]
+    return just_ff(_dir, create_floder = create_floder)
 
 def ignore_warning():
     import warnings
@@ -304,11 +338,8 @@ def sec_to_data(y):
     #10d : 10h : 10m : 10s
     return ''.join([d, h, m, s])
 
-
-
-
 class progress_predictor(object):
-    def __init__(self, total_num, record=False):
+    def __init__(self, total_num:int, record:bool=False):
         self.start_time = time.time()
         self.remain_num = total_num
         self.handle_start_time = time.time()
@@ -361,12 +392,12 @@ class progress_predictor(object):
     def last_cost(self):
         return sec_to_data(time.time()-self.last_time)
         
-def listdir(path):
+def listdir(path:str):
     files_list = os.listdir(path)
     files_list.sort()
     return files_list
 
-def clean_dir(floder_path):
+def clean_dir(floder_path:str):
     file_or_dir = listdir(floder_path)
     if len(file_or_dir) != 0:
         for fod in file_or_dir:
@@ -375,3 +406,33 @@ def clean_dir(floder_path):
                 os.unlink(remove_path)
             else:
                 os.removedirs(remove_path)
+
+def name_in_list(file_path:str, dis_list):
+    n = get_name_from_path(file_path)
+    if n in dis_list:
+        return True
+    return False
+
+def get_name_from_path(file_path:str, ret_all:bool=False):
+    """_summary_
+    Return the file name from file path.
+    The return name without the suffix.
+
+    Args:
+        file_path (_type_): str
+    """
+    dir, n = os.path.split(file_path)
+    n, suffix = os.path.splitext(n)
+    if ret_all:
+        return dir, n, suffix
+    return n
+
+def listdir_com_p(path:str):
+    """_summary_
+    return complete path of the subfile
+    Args:
+        path (_type_): 
+    """
+    files_list = listdir(path)
+    com_p = [os.path.join(path, f) for f in files_list]
+    return com_p
