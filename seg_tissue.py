@@ -74,7 +74,7 @@ def gen_mask(model, img):
                     mask[_ind[0]:_ind[1], _ind[2]:_ind[3]] += 0 
                 else:
                     mask[_ind[0]:_ind[1], _ind[2]:_ind[3]] += 1 
-    mask = np.array((mask>4)*255, dtype=np.uint8)
+    mask = np.array((mask>1)*255, dtype=np.uint8)
     return mask
 
 model       = tm.resnet34(pretrained=True)
