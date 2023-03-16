@@ -7,6 +7,7 @@ import torch
 import skimage
 from torchvision.utils import make_grid
 import skimage.measure
+import skimage.morphology
 from PIL import Image
 import matplotlib.pyplot as plt
 
@@ -29,12 +30,12 @@ def cv2_reader(file_path):
         img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
     return img
 
-def cv2_writer(file_path, img, *args):
+def cv2_writer(file_path, img, *,color='BGR'):
     if type(img) is not np.ndarray:
         img = np.array(img, dtype = np.uint8)
-    if len(img.shape) >=3:
-        img = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
-    cv2.imwrite(file_path, img,*args)
+    if len(img.shape) >=3 and color=="BGR":
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    cv2.imwrite(file_path, img)
 
 def cv2_resize(file, magnigicine = 1, interpolation=cv2.INTER_NEAREST, *args):
     size1, size2 = np.shape(file)[1], np.shape(file)[0]
@@ -61,8 +62,6 @@ def concat_img(images, channel_frist=True, nrow=1, padding=10):
         data_type = torch.uint8 if temp_images[0].max() >1 else torch.float32
         mean_value = 128 if temp_images[0].max() >1 else 0.5
         for img in temp_images:
-            # m_w = m_w if img.shape[0]<m_w else img.shape[0]
-            # m_h = m_h if img.shape[1]<m_h else img.shape[1]
             if len(img.shape) ==3:
                 three_d = True
 
@@ -148,4 +147,6 @@ def add_mask(img, mask, channel_frist=False):
     if not channel_frist and type(img) is np.ndarray:
         _temp = img.transpose(2,0,1)*mask
         return  _temp.transpose(1,2,0)
+
+
 
