@@ -16,4 +16,4 @@ Finally, the checkpoint of the pretrained model in our data if availabel in:
 ## **Finally, please do not forget that the model pre-trained on our data can only handle images at 10X resolution.**
 
 
-![image](https://raw.githubusercontent.com/Bingchao-Zhao/QC/master/A-2.jpg)
+![image](https://raw.githubusercontent.com/Bingchao-Zhao/QC/master/A-2.png)
