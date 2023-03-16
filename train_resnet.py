@@ -21,20 +21,27 @@ from torch.nn import BCEWithLogitsLoss, DataParallel,CrossEntropyLoss
 from torch.optim import SGD
 from torch.utils.data import Dataset
 from sklearn.metrics import precision_score,recall_score,confusion_matrix,accuracy_score,f1_score, roc_auc_score
-
+import Config
 import pandas as pd
 from sklearn.model_selection import train_test_split
 import my_utils.read_wsi_roi as rwr
 parser = argparse.ArgumentParser()
 parser.add_argument('--epoch',default=30,type=int)
 parser.add_argument('--batch_size',default=256,type=int)
-
+win = 0
+num = 0
+train_num= []
+train_loss = []
+best_f1 = 0
+REVOLUTION = "20X"
+MAX_PATCH_OF_WSI = 300
 DATA_CENTER = "nanfang"
 MODEL = 'resnet34'
-
+LABEL_PATH  = "../../data/nanfang/train_and_text/train.csv"
+conf = Config.config()
 
 class ImageDataset(Dataset):
-    DATA_ROOT = 'your data path'
+    DATA_ROOT = '/media/zhaobingchao/MyBook/glioma/data/tissue_seg'
     SIZE = 224
     TISSUE_CUTOFF = 235
     STRIDE = 150
