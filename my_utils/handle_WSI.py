@@ -18,15 +18,16 @@ def remove_small_hole(mask, h_size=10):
     value = np.unique(mask)
     if len(value)>2:
         err(f"Input mask should be a binary, but get value:({value})")
-    pre_mask_rever = mask<=0
+    pre_mask_rever = mask==0
     pre_mask_rever = skimage.morphology.remove_small_objects(pre_mask_rever, \
                                                             min_size=h_size)
-    mask[pre_mask_rever<=0] = np.max(mask)
+    mask[pre_mask_rever<=0] = 1
     return mask
 
 def ostu_seg_tissue(img, 
                     remove_hole:bool=True, 
-                    min_size:int=4000):
+                    min_size:int=4000,
+                    mod:str='cutoff'):
     """Segmentation tissue of WSI with ostu.
 
     Args:
@@ -41,11 +42,15 @@ def ostu_seg_tissue(img,
     # Remove noise using a Gaussian filter
     gray = cv2.GaussianBlur(gray, (35,35), 0)
     # Otsu thresholding and mask generation
-    ret, thresh_otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    if mod=="cutoff":
+        thresh_otsu = gray < 234
+    elif mod=="ostu":
+        ret, thresh_otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    
     if remove_hole:
         thresh_otsu = remove_small_hole(thresh_otsu, min_size)
-        thresh_otsu = 255-thresh_otsu
+        thresh_otsu = thresh_otsu!=0
         thresh_otsu = remove_small_hole(thresh_otsu, min_size)
     else:
-        thresh_otsu = 255-thresh_otsu
+        thresh_otsu = thresh_otsu!=0
     return thresh_otsu
