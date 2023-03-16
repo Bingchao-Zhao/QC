@@ -1,5 +1,8 @@
 import os
 import copy
+# from multiprocessing import Manager,Process,Lock
+# import math
+# import threading
 
 import cv2
 import numpy as np
@@ -8,9 +11,10 @@ import pyvips
 
 from . utils import *
 from . import handle_img as hi
+from . import multi_process as mp
 from . import file_util as fu
 
-SMALL_PATCH = 88*224
+SMALL_PATCH = 64*224
 MAX_SIZE = 150000
 COMPRESS_PARAMS = [cv2.IMWRITE_JPEG_QUALITY, 80]
 INDEX_SPLIT = '#'
@@ -72,6 +76,8 @@ def get_patches(img,*, img_size=224, stride = 224, append_rate = 0.5,\
     height, width = img.shape[:2]
     if height<img_size or width<img_size: 
         warn("input size is ({} {}), small than img_size:{}".format(height, width, img_size))
+        if return_patch:
+            return [],[]
         return []
 
     if np.shape(mask)[0] != 0:
@@ -86,10 +92,10 @@ def get_patches(img,*, img_size=224, stride = 224, append_rate = 0.5,\
     patches, ret_index = [], []
 
     for ind in index:
-        _img = img[ind[0]:ind[1], ind[2]:ind[3]]
+        _img = gfi(img, ind)
         if np.shape(mask)[0] != 0:
             # print(np.sum(mask[ind[0]:ind[1], ind[2]:ind[3]]),img_size*img_size*append_rate)
-            if np.sum(mask[ind[0]:ind[1], ind[2]:ind[3]])<img_size*img_size*append_rate:
+            if np.sum(gfi(mask, ind))<img_size*img_size*append_rate:
                 continue
         if return_patch:
             patches.append(_img)
@@ -244,8 +250,11 @@ def write_mutil_patch(patch, name,
             continue
         _h = int(h//down_sample[resolution[num]])
         _w = int(w//down_sample[resolution[num]])
+        # some patch small than 4
+        if _h*_w == 0:
+            continue
         _patch = cv2.resize(patch, (_w, _h))
-        hi.cv2_writer(n, _patch, img_compress)
+        hi.cv2_writer(file_path=n, img=_patch)
 
 def crop_and_save_wsi(svs_file, 
                         input_root, 
@@ -253,7 +262,25 @@ def crop_and_save_wsi(svs_file,
                         name = NAME, 
                         just_hanle=False,
                         patch_size = SMALL_PATCH, 
-                        img_compress=COMPRESS_PARAMS):
+                        img_compress=COMPRESS_PARAMS, 
+                        resolution=['40X', '20X', '10X'], 
+                        down_sample={'40X':1, '20X':2, '10X':4}):
+    """_summary_
+
+    Args:
+        svs_file (_type_): _description_
+        input_root (_type_): _description_
+        save_root (_type_): _description_
+        name (_type_, optional): _description_. Defaults to NAME.
+        just_hanle (bool, optional): _description_. Defaults to False.
+        patch_size (_type_, optional): _description_. Defaults to SMALL_PATCH.
+        img_compress (_type_, optional): _description_. Defaults to COMPRESS_PARAMS.
+        resolution (list, optional): _description_. Defaults to ['40X', '20X', '10X'].
+        down_sample (dict, optional): _description_. Defaults to {'40X':1, '20X':2, '10X':4}.
+
+    Returns:
+        _type_: _description_
+    """
     if not just_ff(svs_file, file=True):
         err("File '{}' is not exist!!".format(svs_file))
     if not just_hanle:
@@ -269,7 +296,8 @@ def crop_and_save_wsi(svs_file,
         index_list=[[0,height, 0,width]]
     
     floder = os.path.splitext(os.path.split(svs_file)[-1])[0]
-    creat_mutil_resolution_dir(svs_file, input_root,  save_root)
+    if not just_hanle:
+        creat_mutil_resolution_dir(svs_file, input_root, save_root, resolution=resolution)
 
 
     start = time.time()
@@ -281,7 +309,9 @@ def crop_and_save_wsi(svs_file,
         if_crop, patch_name = just_mutil_resolution_patch(svs_file, 
                                                     input_root, 
                                                     save_root, 
-                                                    ind, name = name)
+                                                    ind, name = name,
+                                                    resolution=resolution, 
+                                                    down_sample=down_sample)
         if if_crop:
             continue
 
@@ -289,7 +319,10 @@ def crop_and_save_wsi(svs_file,
             rtime_print("loading index:'{}',num:'{}/{}' img:'{}'".\
                         format(ind, num, len(index_list), floder))
             img2 = pyvips_crop(svs_file, ind)
-            write_mutil_patch(img2, patch_name, img_compress = img_compress)
+            write_mutil_patch(img2, patch_name, 
+                                img_compress = img_compress,
+                                resolution=resolution, 
+                                down_sample=down_sample)
         handle = True
     if not just_hanle:
         info('Using time:{}'.format(time.time()-start))
@@ -325,7 +358,28 @@ def order_image_name(img_path, suffix = 'png'):
         ret.append(order_images)
     return ret
 
-def reconstruct_wsi(files_floder,splite = '-'):
+
+
+def read_wsi_patch(file_patch, splite = '#'):
+    f = os.path.split(file_patch)[-1]
+    id_, x_b, x_e, y_b, y_e = f.split(splite)[0:5]
+    y_e = y_e.split('.')[0]
+    x_b, x_e, y_b, y_e = [int(i) for i in [x_b, x_e, y_b, y_e]]
+    img = hi.cv2_reader(file_patch)
+    return [x_b, x_e, y_b, y_e], img
+
+def patch_worker(member, patches_dic, num, lock, splite = '#'):
+    for file_path in member:
+        ind, img = read_wsi_patch(file_path, splite)
+        if  lock.acquire():
+            patches_dic[str(ind)] = [ind, img]
+            lock.release() 
+        
+
+
+
+
+def reconstruct_wsi(files_floder,splite = '#', processer=10):
     """
         将小块的patch重组成完整的patch，patch的格式为：
         id-x_begin-x_end-y_begin-y_end.png
@@ -333,15 +387,29 @@ def reconstruct_wsi(files_floder,splite = '-'):
     ret  = np.zeros([MAX_SIZE,MAX_SIZE,3],dtype = np.uint8)
     files = os.listdir(files_floder)
     H,W = 0,0
-    for f in files:
-        # info(f)
-        id_, x_b, x_e, y_b, y_e = f.split(splite)[0:5]
-        y_e = y_e.split('.')[0]
-        x_b, x_e, y_b, y_e = [int(i) for i in [x_b, x_e, y_b, y_e]]
-        img = hi.cv2_reader(os.path.join(files_floder, f))
-        ret[x_b:x_e, y_b:y_e] = img
-        H = x_e if x_e > H else H
-        W = y_e if y_e > W else W
+    if processer>1:
+        patches_dic = {}
+        mp.mutil_thread([os.path.join(files_floder, f) for f in files], 
+                        patch_worker, processer, 
+                        patches_dic=patches_dic, splite='#')
+
+        if len(patches_dic.keys()) != len(files):
+            err('mutil processor num:{} donot equal to file num:{}'.\
+                format(len(patches_dic.keys()),len(files)))
+        
+        for key, [ind, img] in patches_dic.items():
+            ret[ind[0]:ind[1], ind[2]:ind[3]] = img
+            H = ind[1] if ind[1] > H else H
+            W = ind[3] if ind[3] > W else W
+        patches_dic.clear()
+        return ret[0:H, 0:W]
+    else:
+        for f in files:
+            ind, img = read_wsi_patch(os.path.join(files_floder, f), splite=splite)
+            ret[ind[0]:ind[1], ind[2]:ind[3]] = img
+            H = ind[1] if ind[1] > H else H
+            W = ind[3] if ind[3] > W else W
+
     return ret[0:H, 0:W]
     
 
@@ -402,3 +470,14 @@ def Splice_patches_by_index(patches, index, channel_first=True, overlay_model='m
             ret[ind[0]:ind[1], ind[2]:ind[3], ...] = \
                 overlay_oper(patches[num], ret[ind[0]:ind[1], ind[2]:ind[3], ...])
     return ret
+
+
+def read_wsi_with_img(img_path, p_splite='#'):
+    if os.path.isfile(img_path):
+        img = hi.img_reader(img_path)
+    elif os.path.isdir(img_path):
+        img = reconstruct_wsi(img_path, splite=p_splite)
+    else:
+        err('ERROR file type:"{}"'.format(img_path))
+    
+    return img
