@@ -5,7 +5,7 @@ import yaml
 
 from .utils import *
 
-def write_csv_row(file_name,context=[], model = 'a', encoding='utf-8', just=False):
+def write_csv_row(file_name:str, context=[], model = 'a', encoding='utf-8', just=False):
     """write csv row
 
     Args:
@@ -36,7 +36,7 @@ def write_csv_row(file_name,context=[], model = 'a', encoding='utf-8', just=Fals
             csv_writer.writerow(con)
 
 
-def write_json(file_name, context={}, model='a', encoding='utf-8'):
+def write_json(file_name:str, context={}, model='a', encoding='utf-8'):
     """write json file
 
     Args:
@@ -63,7 +63,7 @@ def construct_file_context(context, mutil_line=False, split=' '):
             write_context = context
     return write_context
 
-def write_file(file_name,context, model='a', encoding='utf-8'):
+def write_file(file_name:str,context, model='a', encoding='utf-8'):
     """write file
 
     Args:
@@ -76,7 +76,7 @@ def write_file(file_name,context, model='a', encoding='utf-8'):
     with open(file_name, model, encoding=encoding) as fo:
         fo.write(context)
 
-def record_in_file(file_name,context, mutil_line=False, model='a', \
+def record_in_file(file_name:str, context, mutil_line=False, model='a', \
                     split=' ', encoding='utf-8'):
     """write record file
 
@@ -90,7 +90,7 @@ def record_in_file(file_name,context, mutil_line=False, model='a', \
     write_context = construct_file_context(context, mutil_line=mutil_line, split=split)
     write_file(file_name,write_context, model=model, encoding=encoding)
 
-def split_path(root_path, input_path):
+def split_path(root_path:str, input_path:str):
     path_split = os.sep
     while(root_path[-1]==path_split):
         root_path = root_path[0:len(root_path)-1]
@@ -101,7 +101,7 @@ def split_path(root_path, input_path):
         ret_path = ret_path[1:len(ret_path)]
     return ret_path
 
-def csv_reader(file_name, encoding='utf-8'):
+def csv_reader(file_name:str, encoding='utf-8'):
     ret = []
     with open(file_name, encoding=encoding) as f:
         reader = csv.reader(f)
@@ -109,10 +109,16 @@ def csv_reader(file_name, encoding='utf-8'):
             ret.append(i)
     return ret
 
-def read_yaml(yaml_file, encoding='utf-8'):
+def read_yaml(yaml_file:str, encoding='utf-8'):
     # 打开yaml文件
-    with open(yaml_file, 'r', encoding="utf-8") as file:
+    with open(yaml_file, 'r', encoding=encoding) as file:
         file_data = file.read()
     # 将字符串转化为字典或列表
     data = yaml.load(file_data,Loader=yaml.FullLoader)
     return data
+
+def write_yaml(yaml_file:str, context, encoding='utf-8', mod='a'):
+    with open(yaml_file, mod, encoding=encoding)as f:
+        # allow_unicode=True，解决存储时unicode编码问题。
+        # sort_keys=False，解决写入yaml的数据则不会排序后写入。
+        f.write(yaml.dump(context, allow_unicode=True, sort_keys=False))
