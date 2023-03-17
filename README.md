@@ -9,8 +9,8 @@ WSI file (.svs or .tiff, etc.) directly. You have to save the WSI file to .png o
 
 Finally, the checkpoint of the pretrained model in our data if availabel in:
 
-链接：https://pan.baidu.com/s/1ohAg2nMxch6gWiZGjycrmA 
-提取码：4ycc
+链接：https://pan.baidu.com/s/1WZaM9TK8g9ooSbNBlXZWuw 
+提取码：zkhb
 
 
 ## **Finally, please do not forget that the model pre-trained on our data can only handle images at 10X resolution.**
