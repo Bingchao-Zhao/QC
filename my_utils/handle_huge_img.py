@@ -11,7 +11,6 @@ import pyvips
 
 from . utils import *
 from . import handle_img as hi
-from . import multi_process as mp
 from . import file_util as fu
 
 SMALL_PATCH = 64*224
